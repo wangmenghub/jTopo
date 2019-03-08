@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title> </title>
+    <script src="jtopo.min.js"></script>
+    <script src="jquery.js"></script>
+    <script type="text/javascript">
+
+        var data = [
+            {
+                assets: [
+                    { name: '一区资产', ip: '10.163.1.1', type: 'asset', dis_ip: '10.163.1.5' },
+                    { name: '一区资产', ip: '10.163.1.2', type: 'asset', dis_ip: '10.163.1.5' },
+                    { name: '一区资产', ip: '10.163.1.3', type: 'asset', dis_ip: '10.163.1.5' },
+                    { name: '一区资产', ip: '10.163.1.4', type: 'asset', dis_ip: '10.163.1.5' }
+                ],
+                switches: { name: '一区交换机', ip: '10.163.1.5', type: 'switch', dis_ip: '10.163.1.6' },
+                sensor: { name: '一区采集器', ip: '10.163.1.6', type: 'sensor', dis_ip: '10.163.1.7' },
+                firewall: { name: '一区防火墙', ip: '10.163.1.7', type: 'firewall', dis_ip: '10.163.2.5' }
+            },
+            {
+                assets: [
+                    { name: '二区资产', ip: '10.163.2.1', type: 'asset', dis_ip: '10.163.2.5' },
+                    { name: '二区资产', ip: '10.163.2.2', type: 'asset', dis_ip: '10.163.2.5' },
+                    { name: '二区资产', ip: '10.163.2.3', type: 'asset', dis_ip: '10.163.2.5' },
+                    { name: '二区资产', ip: '10.163.2.4', type: 'asset', dis_ip: '10.163.2.5' }
+                ],
+                switches: { name: '二区交换机', ip: '10.163.2.5', type: 'switch', dis_ip: '10.163.2.6' },
+                sensor: { name: '二区采集器', ip: '10.163.2.6', type: 'sensor', dis_ip: '10.163.2.7' },
+                firewall: { name: '二区网闸', ip: '10.163.2.7', type: 'gatekeeper', dis_ip: '10.163.3.7' }
+            },
+            {
+                assets: [
+                    { name: '三区资产', ip: '10.163.3.1', type: 'asset', dis_ip: '10.163.3.7' },
+                    { name: '三区资产', ip: '10.163.3.2', type: 'asset', dis_ip: '10.163.3.7' },
+                    { name: '三区资产', ip: '10.163.3.3', type: 'asset', dis_ip: '10.163.3.7' },
+                    { name: '三区资产', ip: '10.163.3.4', type: 'asset', dis_ip: '10.163.3.7', alarm: '离线' },
+                    { name: '三区资产', ip: '10.163.3.5', type: 'asset', dis_ip: '10.163.3.7' },
+                    { name: '三区资产', ip: '10.163.3.6', type: 'asset', dis_ip: '10.163.3.7' }
+                ],
+                switches: { name: '三区交换机', ip: '10.163.3.7', type: 'switch', dis_ip: '10.163.3.8' },
+                sensor: { name: '三区采集器', ip: '10.163.3.8', type: 'sensor', dis_ip: '10.163.3.9' },
+                firewall: { name: '三区平台', ip: '10.163.3.9', type: 'server', dis_ip: '10.163.4.0' }
+            },
+            { group: { name: '集团', ip: '10.163.4.0', type: 'group' } }
+        ]
+
+        $(document).ready(function () {
+            var nodeX = 100;
+            var nodeY = 50;
+            var relationArr = [];
+            var canvas = document.getElementById('canvas');
+            canvas.width = window.innerWidth - 30;
+            canvas.height = window.innerHeight - 30;
+            var stage = new JTopo.Stage(canvas);
+            var scene = new JTopo.Scene();
+            scene.background = 'img/bg.jpg';
+
+            for (let i = 0; i < data.length; i++) {
+                getNode(data[i], i, data.length)
+            }
+            // 获取分区
+            function getNode(data, i, num) {
+                var switches = data.switches
+                var sensor = data.sensor
+                var firewall = data.firewall
+                var group = data.group
+                if (!data.group) {
+                    var t_switches = node(nodeX + (i * 300), nodeY + (2 * 60), switches.type, switches.name, switches.ip, switches.dis_ip)
+                    var t_sensor = node(nodeX + (i * 300) + 100, nodeY + (2 * 100), sensor.type, sensor.name, sensor.ip, sensor.dis_ip)
+                    var t_firewall = node(nodeX + (i * 300) + 220, nodeY + (2 * 100), firewall.type, firewall.name, firewall.ip, firewall.dis_ip)
+                    relationArr.push(t_switches, t_sensor, t_firewall)
+                } else {
+                    var t_group = node(nodeX + (i * 150), nodeY + (4 * 100), group.type, group.name, group.ip, group.dis_ip)
+                    relationArr.push(t_group)
+                }
+
+                if (data.assets) {
+                    for (let j = 0; j < data.assets.length; j++) {
+                        var ip = data.assets[j].ip;
+                        var name = data.assets[j].name;
+                        var type = data.assets[j].type;
+                        var dis_ip = data.assets[j].dis_ip;
+                        if (data.assets[j].alarm) {
+                            var t_ip = node(nodeX + (j * 60) + (i * 300), nodeY, type, name, ip, dis_ip)
+                            t_ip.alarm = data.assets[j].alarm
+                        } else {
+                            var t_ip = node(nodeX + (j * 60) + (i * 300), nodeY, type, name, ip, dis_ip)
+                        }
+
+                        relationArr.push(t_ip)
+                    }
+                }
+                if (i === num - 1) {
+                    relationFormate(relationArr);
+                }
+            }
+            function relationFormate(relationArr) {
+                for (var i = 0; i < relationArr.length; i++) {
+                    for (var j = 0; j < relationArr.length; j++) {
+                        if (relationArr[i].dis_ip == relationArr[j].ip) {
+                            linkNode(relationArr[i], relationArr[j], true)
+                        }
+                    }
+                }
+            };
+
+            function node(x, y, img, name, ip, dis_ip) {
+                var node = new JTopo.Node(name);
+                node.setImage('./img/' + img + '.png', true);
+                node.setLocation(x, y);
+                node.dis_ip = dis_ip
+                node.ip = ip
+                scene.add(node);
+                return node;
+            }
+
+            function linkNode(nodeA, nodeZ, f) {
+                var link;
+                link = new JTopo.FoldLink(nodeA, nodeZ);
+                link.direction = 'vertical';
+                // link.strokeColor = '255,255,0';
+                scene.add(link);
+                return link;
+            }
+
+            var beginNode = null;
+            var tempNodeA = new JTopo.Node('tempA');;
+            tempNodeA.setSize(1, 1);
+            
+            var tempNodeZ = new JTopo.Node('tempZ');;
+            tempNodeZ.setSize(1, 1);
+            
+            var link = new JTopo.FoldLink(tempNodeA, tempNodeZ);
+            
+            scene.mouseup(function(e){
+                if(e.button == 2){
+                    scene.remove(link);
+                    return;
+                }
+                if(e.target != null && e.target instanceof JTopo.Node){
+                    if(beginNode == null){
+                        beginNode = e.target;
+                        scene.add(link);
+                        tempNodeA.setLocation(e.x, e.y);
+                        tempNodeZ.setLocation(e.x, e.y);
+                    }else if(beginNode !== e.target){
+                        var endNode = e.target;
+                        var l = new JTopo.FoldLink(beginNode, endNode);
+                        scene.add(l);
+                        beginNode = null;
+                        scene.remove(link);
+                    }else{
+                        beginNode = null;
+                    }
+                }else{
+                    scene.remove(link);
+                }
+            });
+            scene.mousedown(function(e){
+                if(e.target == null || e.target === beginNode || e.target === link){
+                    scene.remove(link);
+                }
+            });
+            scene.mousemove(function(e){
+                tempNodeZ.setLocation(e.x, e.y);
+            });
+            stage.add(scene);
+        });       
+    </script>
+</head>
+
+<body>
+    <canvas id="canvas" width="100%" height="100%"></canvas>
+</body>
+
+</html>
